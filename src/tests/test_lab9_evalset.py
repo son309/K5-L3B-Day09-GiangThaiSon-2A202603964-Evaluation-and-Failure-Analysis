@@ -8,6 +8,8 @@ import sys
 
 import pytest
 
+from lab9.evalset import sha12
+
 
 @pytest.fixture
 def evalset_cli(tmp_path):
@@ -57,3 +59,12 @@ def test_check_rejects_missing_tags(tmp_path, evalset_cli):
     result = evalset_cli("--check")
     assert result.returncode == 1, result.stdout + result.stderr
     assert "failure_modes empty" in result.stdout
+
+
+def test_evalset_sha_is_independent_of_platform_newlines(tmp_path):
+    lf = tmp_path / "lf.jsonl"
+    crlf = tmp_path / "crlf.jsonl"
+    lf.write_bytes(b'{"item_id":"E-001"}\n{"item_id":"E-002"}\n')
+    crlf.write_bytes(b'{"item_id":"E-001"}\r\n{"item_id":"E-002"}\r\n')
+
+    assert sha12(lf) == sha12(crlf)

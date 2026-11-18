@@ -30,12 +30,37 @@ REQUIRED = ("item_id", "claim_id", "failure_modes", "provenance", "split", "eval
 FM_CODE = re.compile(r"FM-\d{2}")
 
 
+# Failure modes exercised by each public regression item.  These tags describe
+# which bug an item can expose; they are not labels saying the reference agent
+# necessarily fails the item.
+FAILURE_MODES_BY_CLAIM: dict[str, list[str]] = {
+    "C-001": ["FM-01", "FM-04"],
+    "C-002": ["FM-03"],
+    "C-003": ["FM-01"],
+    "C-004": ["FM-01"],
+    "C-005": ["FM-01", "FM-09"],
+    "C-006": ["FM-06"],
+    "C-007": ["FM-02"],
+    "C-008": ["FM-08"],
+    "C-009": ["FM-02"],
+    "C-010": ["FM-01"],
+    "C-011": ["FM-07"],
+    "C-012": ["FM-07"],
+    "C-013": ["FM-05"],
+    "C-014": ["FM-04", "FM-05", "FM-08"],
+}
+
+
 def load_jsonl(path: Path) -> list[dict[str, Any]]:
     return [json.loads(line) for line in path.read_text(encoding="utf-8").splitlines() if line.strip()]
 
 
 def sha12(path: Path) -> str:
-    return hashlib.sha256(path.read_bytes()).hexdigest()[:12]
+    # Git may check out text files with CRLF on Windows and LF on Linux.  The
+    # eval-set identity must describe its content, not the runner's newline
+    # convention, otherwise a Windows-generated baseline always fails in CI.
+    content = path.read_bytes().replace(b"\r\n", b"\n").replace(b"\r", b"\n")
+    return hashlib.sha256(content).hexdigest()[:12]
 
 
 def build(source: Path = SOURCE) -> tuple[int, int]:
@@ -46,8 +71,7 @@ def build(source: Path = SOURCE) -> tuple[int, int]:
         items.append({
             "item_id": item_id,
             "claim_id": claim["claim_id"],
-            # TODO M1: replace [] with the FM-xx codes from your taxonomy that this item exercises.
-            "failure_modes": [],
+            "failure_modes": FAILURE_MODES_BY_CLAIM.get(claim["claim_id"], ["FM-01"]),
             "provenance": {"source": "lab8_public", "matrix_id": claim.get("matrix_id"),
                            "from_trace": None, "generator": None,
                            "label_by": "lab8_matrix", "checked_by": None},

@@ -56,7 +56,11 @@ def load_jsonl(path: Path) -> list[dict[str, Any]]:
 
 
 def sha12(path: Path) -> str:
-    return hashlib.sha256(path.read_bytes()).hexdigest()[:12]
+    # Git may check out text files with CRLF on Windows and LF on Linux.  The
+    # eval-set identity must describe its content, not the runner's newline
+    # convention, otherwise a Windows-generated baseline always fails in CI.
+    content = path.read_bytes().replace(b"\r\n", b"\n").replace(b"\r", b"\n")
+    return hashlib.sha256(content).hexdigest()[:12]
 
 
 def build(source: Path = SOURCE) -> tuple[int, int]:
